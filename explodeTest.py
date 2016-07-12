@@ -6,6 +6,7 @@ from apiclient import discovery
 import oauth2client
 from oauth2client import client
 from oauth2client import tools
+from explode import expld
 
 try:
     import argparse
@@ -65,42 +66,8 @@ def main():
     spreadsheetId = '1x6GHOWAbmr9GZfmaDpBoCzsWTjzwKCyTOH-3Eo7kvJA'
     #rangeName = 'Class Data!A2:E'
     #result = service.spreadsheets().values().get(spreadsheetId=spreadsheetId, range=rangeName).execute()
-    result = service.spreadsheets().get(spreadsheetId=spreadsheetId, fields='sheets(properties)').execute()
-    values = result.get('values', [])
-    sht = result.get('sheets', [])
-    print(result)
-    print(sht)
-    assemblies = []
-
-    if not sht:
-        print("no poroperties")
-    else:
-        print(type(sht))
-        for sheet in sht:
-            print(type(sheet))
-            assemblies.append(sheet['properties']['title'])
-            print('%s' % sheet['properties']['title'])
-
-    for sheet_title in assemblies:
-        rangeName = ('%s!1:3' % sheet_title)
-        result = service.spreadsheets().values().get(spreadsheetId=spreadsheetId, range=rangeName).execute()
-        values = result.get('values', [])
-        print(values)  
-        print(type(values))  
-        print(result)
-        print(type(result))      
-        
-
-
-
-    if not values:
-        print('No data found.')
-    else:
-        print('Name, Major:')
-        for row in values:
-            # Print columns A and E, which correspond to indices 0 and 4.
-            print('%s, %s' % (row[0], row[4]))
-
+    test = expld(service, spreadsheetId)
+    test.TEST()
 
 if __name__ == '__main__':
     main()
