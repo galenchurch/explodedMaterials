@@ -85,10 +85,13 @@ def main():
         rangeName = ('%s!1:3' % sheet_title)
         result = service.spreadsheets().values().get(spreadsheetId=spreadsheetId, range=rangeName).execute()
         values = result.get('values', [])
+        propvalues = result.get('cellFormat', [])
         print(values)  
         print(type(values))  
         print(result)
-        print(type(result))      
+        print(type(result))  
+        print("find cell color")
+        print(propvalues)    
         
 
 
