@@ -2,11 +2,13 @@ from __future__ import print_function
 import httplib2
 import os
 
+import urllib
 from apiclient import discovery
 import oauth2client
 from oauth2client import client
 from oauth2client import tools
 from explode import expld
+from pymongo import MongoClient
 
 try:
     import argparse
@@ -67,7 +69,16 @@ def main():
     #rangeName = 'Class Data!A2:E'
     #result = service.spreadsheets().values().get(spreadsheetId=spreadsheetId, range=rangeName).execute()
     test = expld(service, spreadsheetId)
-    test.TEST()
+    
+    db = mongoScratchAuth()
+    test.TEST(db)
+        
+
+def mongoScratchAuth():
+    password = "expld920225"
+    mbdClient = MongoClient('mongodb://expldScratch:' + password + '@127.0.0.1/expld')
+    return mbdClient.expld
+
 
 if __name__ == '__main__':
     main()

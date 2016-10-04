@@ -10,7 +10,7 @@ import json
 
 
 class expld:
-    def __init__(self, service, shtID):
+    def __init__(self, service, shtID, nester="PartNo"):
         self.service = service
         self.shtID = shtID
         self.sheetProperties = self.getSheetProperties()
@@ -18,6 +18,7 @@ class expld:
         self.sheets = []
         self.templateCol = []
         self.getSheets()
+        self.nester = nester
 
     def getSheetProperties(self):
         result =  self.service.spreadsheets().get(spreadsheetId=self.shtID, fields='sheets(properties)').execute()
@@ -87,9 +88,112 @@ class expld:
             return ''
         return current_dict
 
+    def addParts(self, db, tree):
+        for key, value in tree.items():
+            print(key)
+            try:
+                #try to insert recursive with children field
+                print(len(value["children"]))
+                part = db.partsDev.insert_one(value).inserted_id
+                self.addParts(db, value["children"])
+            except:
+                #no children just insert part
+                print("no child")
+                part = db.partsDev.insert_one(value).inserted_id
+
+    def newBom(self, db, bom_title):
+        bom_db_id = db.bomDev.insert_one({"name":bom_title, "children":[]}).inserted_id
+        print(bom_db_id)
+        return bom_db_id
+
+    def addPartsAndBom(self, db, tree, top_bom):
+        curr_level_bom = self.newBom(db, top_bom)
+        #db.bomDev.update_one({"_id": curr_level_bom}, {"part_id":part}})  need to add the part id for the current level part itself
+        for key, value in tree.items():
+            print(db.bomDev.find_one({"_id": curr_level_bom}))
+            print("current-top: {}; now: {}".format(top_bom, key))
+            #try to insert recursive with children field 
+            print("this has children:{}".format("children" in value))
+            try:               
+                if(len(value["children"])>0):
+                    print(len(value["children"]))
+                    print(value[self.nester])
+                    part = db.partsDev.insert_one(value).inserted_id
+                    print(db.bomDev.update_one({"_id": curr_level_bom}, {"$push": {"children":part}}))
+                    self.addPartsAndBom(db, value["children"], value[self.nester])
+                    print("children; inserted: {}".format(part))
+                else:
+                    #no children just insert part
+                    print("no child")
+                    part = db.partsDev.insert_one(value).inserted_id
+                    
+                    print("children Flase; inserted: {}".format(part))
+
+                # if(key == top_bom):
+                #     db.bomDev.update_one({"_id": curr_level_bom}, {"part_id":part})
+                #     print("updated bom: {}".format(part))
+            except KeyError:
+                print("no child")
+                print(value[self.nester])
+                part = db.partsDev.insert_one(value).inserted_id
+                print("exception; inserted: {}".format(part))
+                db.bomDev.update_one({"_id": curr_level_bom}, {"$push": {"children":part}})
+
+                if(key == top_bom):
+                    db.bomDev.update_one({"_id": curr_level_bom}, {"part_id":part})
+                    print("exception; updated bom: {}".format(part))
+
+    def genJsonForD3(self, db, top_bom):
+        data = {'name': top_bom, 'children': []}
+        
+
+        top = db.bomDev.find_one({"name":top_bom})
+        if(top):
+            print(top["_id"])
+            data["children"] = self.recurTree(db, top["_id"])
+            print(data)
+
+            with open('templates/data.json', 'w') as outfile:
+                json.dump(data, outfile, indent=4, sort_keys=True, separators=(',', ':'))
+        else:
+            print("Failed to find Top {}".format(top_bom))
+            return None
 
 
-    def TEST(self):
+    def recurTree(self, db, curr_top):
+        """recursivly add part information from boms to JSON"""
+        
+        current = db.bomDev.find_one({"_id":curr_top})
+        try:
+            print("recurTree: {}".format(current["_id"]))
+            #cur_data = db.partsDev.find_one({"_id":current})
+            rec_data = {"name": current["name"], "children":[]}
+
+            try:
+                if(len(current["children"])>0):
+                    for child in current["children"]:
+                        child_data = db.partsDev.find_one({"_id":child})
+                        if(len(child_data["children"])>0):
+                            rec_data = self.recurTree(db, child_data["_id"])
+                        rec_data["children"].append(child_insert)
+
+            except KeyError:
+                print("key_error")
+
+            return rec_data
+        except TypeError:
+            print("there was no {}".format(curr_top))
+            return None
+
+
+
+
+
+                
+
+
+
+    def TEST(self, db):
         print(self.sheets)
         print(self.getColList(self.sheets[0]))
         #self.fromOneMakeTree('PartNo')
@@ -97,6 +201,12 @@ class expld:
         print(tree.keys())
         print(json.dumps(tree, indent=4))
         print(len(tree['201-0018']))
+        self.addPartsAndBom(db, tree, self.sheets[0])
+        print(db.partsDev.find())
+        self.genJsonForD3(db, self.sheets[0])
+
+
+
 
 def nested_set(dic, keys, value):
     for key in keys[:-1]:
