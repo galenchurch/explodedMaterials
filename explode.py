@@ -131,6 +131,15 @@ class expld:
                     db.bomDev.update_one({"_id": curr_level_bom}, {"$push": {"children":part}})              
         return curr_level_bom  
 
+    def getOrFail(self, doc, key):
+        try:
+            return doc[key]
+        except KeyError:
+            return "key {} doesnt exist".format(key)
+        except:
+            return "unknown error"
+
+
     def recurTree(self, db, curr_top):
         """recursivly add part information from boms to JSON"""
         print("top = {}".format(curr_top))
@@ -146,9 +155,9 @@ class expld:
         if current_bom:  #curr_top of ObjectID type is a bom document
 
             """get "name" information and build rec_data structure"""
-            part_data = db.partDev.find_one({"_id":current_bom["part_id"]})
+            part_data = db.partsDev.find_one({"_id":current_bom["part_id"]})
             if part_data: #if there is part info use it
-                rec_data = {"name":part_data[self.nester], "children":[]}
+                rec_data = {"name":part_data[self.nester], "qty": self.getOrFail(part_data, "QTY"), "children":[]}
             else: #else use bom.name
                 rec_data = {"name":current_bom["name"], "children":[]}
 
@@ -168,89 +177,11 @@ class expld:
             if bom_data:
                  return self.recurTree(db, bom_data["_id"])
             else:
-                return {"name": current_part[self.nester]}
+                return {"name": current_part[self.nester], "qty": self.getOrFail(current_part, "QTY")}
 
         else:
             return {"name":"unknown part/bom"}
 
-
-
-
-
-
-    def recurTreeOLD2(self, db, curr_top):
-        """recursivly add part information from boms to JSON"""
-        
-        current_bom = db.bomDev.find_one({"_id":curr_top})
-        current_part = db.bomDev.find_one({"part_id":curr_top})
-
-        #problem is referenticng id for bom or part....need to start with bom, then find parts then see if it has a bom and nest......
-        if current_bom:
-            #if a BOM exists given the ID
-            if "children" in current_bom:
-                if len(current_bom["children"])>0:
-                    print("recurTree current_bom {} has children".format(current_bom))
-                    rec_data = {"name": current_bom["name"], "children":[]}
-                    for child in current_bom["children"]:
-                        print("going in a level")
-                        rec_data["children"].append(self.recurTree(db, child))
-                else:
-                    part_data = db.partsDev.find_one({"_id":child})
-                    
-                    try:
-                        print("{} has no children".format(part_data["self.nester"]))
-                        rec_data = {"name":part_data[self.nester]}
-                    except KeyError:
-                        print("no: {} in: {}".format(self.nester, child))
-
-        elif current_part:
-            #if id is a part search for an associated BoM
-            bom_search = db.bomDev.find_one({"part_id":current_part["_id"]})
-            if bom_search:
-                #go recursive
-                print("recur from elif")
-                return self.recurTree(db, child)
-
-
-        else:
-            print("not sure about this case")
-            part_data = db.partsDev.find_one({"_id":curr_top})
-            if part_data:
-                try:
-                    rec_data = {"name":part_data[self.nester]}
-                except KeyError:
-                    print("no: {} in: {}".format(self.nester, child))
-            else:
-                print("could not find {}".format(curr_top))
-
-        return rec_data
-
-
-    def recurTreeOLD(self, db, curr_top):
-        """recursivly add part information from boms to JSON"""
-        
-        current = db.bomDev.find_one({"_id":curr_top})
-        try:
-            print("recurTree: {}".format(current["_id"]))
-            #cur_data = db.partsDev.find_one({"_id":current})
-            rec_data = {"name": current["name"], "children":[]}
-
-            try:
-                if(len(current["children"])>0):
-                    for child in current["children"]:
-                        child_data = db.partsDev.find_one({"_id":child})
-                        if(len(child_data["children"])>0):
-                            print("found: {} with {} children".format(child_data[self.nester], len(child_data["children"])))
-                            rec_data = self.recurTree(db, child_data["_id"])
-                        rec_data["children"].append(child_insert)
-
-            except KeyError:
-                print("key_error")
-
-            return rec_data
-        except TypeError:
-            print("there was no {}".format(curr_top))
-            return None
 
     def genJsonForD3(self, db, top_bom):
         data = {'name': top_bom, 'children': []}
