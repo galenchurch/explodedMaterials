@@ -91,7 +91,7 @@ class expld:
 
     def addParts(self, db, tree):
         for key, value in tree.items():
-            print(key)
+            # print(key)
             try:
                 #try to insert recursive with children field
                 print(len(value["children"]))
@@ -108,23 +108,48 @@ class expld:
         return bom_db_id
 
     def addPartsAndBom(self, db, tree, top_bom):
-        curr_level_bom = self.newBom(db, tree, top_bom)
+        """bom consists of:
+                basic top level info
+                children: child(qty, ObjectId(part))"""
 
-        #db.bomDev.update_one({"_id": curr_level_bom}, {"part_id":part}})  need to add the part id for the current level part itself
+        #create a new BoM
+        curr_level_bom = self.newBom(db, tree, top_bom)
 
         for key, value in tree.items():
             #try to insert recursive with children field 
             if("children" not in value):  
                 #no children just insert part
-                part = db.partsDev.insert_one(value).inserted_id
+                
+                part_inserted_id = db.partsDev.insert_one(value).inserted_id
+
+                #test, get and add part qty to part dict
+                part_qty = self.getOrFail(value, "QTY")
+                if part_qty:
+                    part = {"id": part_inserted_id, "qty":part_qty}
+                else:
+                    part = {"id": part_inserted_id}
+
                 db.bomDev.update_one({"_id": curr_level_bom}, {"$push": {"children":part}})                 
             else:
-                #field exists
+                #children exist
                 if(len(value["children"])>0):
-                    part = db.partsDev.insert_one(value).inserted_id
+                    part_inserted_id = db.partsDev.insert_one(value).inserted_id
+
+                    #test, get and add part qty to part dict
+                    part_qty = self.getOrFail(value, "QTY")
+                    if part_qty:
+                        part = {"id": part_inserted_id, "qty":part_qty}
+                    else:
+                        part = {"id": part_inserted_id}
+
+
                     db.bomDev.update_one({"_id": curr_level_bom}, {"$push": {"children":part}})
+
                     child_bom = self.addPartsAndBom(db, value["children"], value[self.nester])
-                    db.bomDev.update_one({"_id": child_bom}, {"$set":{"part_id":part}})
+                    print("new child bom{}".format(child_bom))
+                    print("new child bom part{}".format(part))
+
+                    db.bomDev.update_one({"_id": child_bom}, {"$set":{"part":part}})
                 else:
                     #zero children just insert part
                     part = db.partsDev.insert_one(value).inserted_id
@@ -135,9 +160,9 @@ class expld:
         try:
             return doc[key]
         except KeyError:
-            return "key {} doesnt exist".format(key)
+            return False
         except:
-            return "unknown error"
+            return False
 
 
     def recurTree(self, db, curr_top):
@@ -153,11 +178,13 @@ class expld:
 
         
         if current_bom:  #curr_top of ObjectID type is a bom document
-
+            print("bom: {}".format(current_bom))
             """get "name" information and build rec_data structure"""
-            part_data = db.partsDev.find_one({"_id":current_bom["part_id"]})
+
+            part_data = db.partsDev.find_one({"_id":current_bom["part"]["id"]})
+            print(part_data)
             if part_data: #if there is part info use it
-                rec_data = {"name":part_data[self.nester], "qty": self.getOrFail(part_data, "QTY"), "children":[]}
+                rec_data = {"name":part_data[self.nester], "children":[]}
             else: #else use bom.name
                 rec_data = {"name":current_bom["name"], "children":[]}
 
@@ -165,7 +192,12 @@ class expld:
                 if len(current_bom["children"]) > 0:  #bom.children exists and has items
                     print("in bom in children")
                     for child in current_bom["children"]: #recursivly search though children (they will be parts or boms)
-                        rec_data["children"].append(self.recurTree(db, child))
+                        print(child)
+                        to_append = {"qty": self.getOrFail(child, "qty")}
+                        to_append.update(self.recurTree(db, child["id"]))
+                        rec_data["children"].append(to_append)
+                        # print(to_append)
+                        # print(rec_data)
                     return rec_data
             else:
                 return rec_data
@@ -173,11 +205,13 @@ class expld:
         elif current_part: #curr_top of ObjectID type is a part document
 
             """attempt to find and associated BoM for the part"""
-            bom_data = db.bomDev.find_one({"part_id":current_part["_id"]})
+            print("current part from attemp {}".format(current_part))
+            bom_data = db.bomDev.find_one({"part.id":current_part["_id"]})
+            print("bom_data: {}".format(bom_data))
             if bom_data:
                  return self.recurTree(db, bom_data["_id"])
             else:
-                return {"name": current_part[self.nester], "qty": self.getOrFail(current_part, "QTY")}
+                return {"name": current_part[self.nester]}
 
         else:
             return {"name":"unknown part/bom"}
@@ -218,7 +252,7 @@ class expld:
     def describeBom(self, db, bom_id, attr):
         if type(attr) is dict:
             part = db.partsDev.insert_one(attr).inserted_id
-            db.bomDev.update_one({"_id": bom_id}, {"$set":{"part_id":part}})
+            db.bomDev.update_one({"_id": bom_id}, {"$set":{"part":{"id":part}}})
         return part
 
 
@@ -234,11 +268,10 @@ class expld:
         print(self.getColList(self.sheets[0]))
         #self.fromOneMakeTree('PartNo')
         tree = self.nestedTree('PartNo', self.sheets[0])
-        print(tree.keys())
-        print(json.dumps(tree, indent=4))
+        # print(tree.keys())
+        # print(json.dumps(tree, indent=4))
         print(len(tree['201-0018']))
         working_bom = self.addPartsAndBom(db, tree, self.sheets[0])
-        print(db.partsDev.find())
         print(self.describeBom(db, working_bom, {"PartNo":self.sheets[0], "desctiption":"top_level"}))
         self.genJsonForD3(db, self.sheets[0])
 
