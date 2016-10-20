@@ -21,6 +21,8 @@
 </style>
 <body>
 <script src="//d3js.org/d3.v3.min.js"></script>
+  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
 <script>
 
 var width = 900,
@@ -73,9 +75,36 @@ d3.json("/data.json", function(error, json) {
       .attr("dx", function(d) { return d.children ? -8 : 8; })
       .attr("dy", 3)
       .attr("text-anchor", function(d) { return d.children ? "end" : "start"; })
+      .attr("id-val", function(d) { return d.id; })
       .text(function(d) { return "(" + d.qty + ") " + d.name; });
+
 });
 
 d3.select(self.frameElement).style("height", height + "px");
+
+
+
+$( function() {
+  $( document ).tooltip({
+    items: "g",
+    content: function() {
+      var element = $( this );
+      if ( element.is( "g" ) ) {
+        var id = element.find("text").attr("id-val");
+        var ret_data = $.ajax({
+          url: "/query/part/" + id,
+          context: document.body
+        }).done(function(data) {
+          
+          console.log( data)
+          return JSON.stringify(data)
+        });
+        return ret_data
+       }
+      }
+  });
+} );
+
+
 
 </script>

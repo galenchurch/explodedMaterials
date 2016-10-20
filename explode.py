@@ -1,13 +1,13 @@
 from __future__ import print_function
 import httplib2
-import os
+import os, json
 
 from bson.objectid import ObjectId
 from apiclient import discovery
 import oauth2client
 from oauth2client import client
 from oauth2client import tools
-import json
+from JSONEncoder import JSONEncoder
 
 
 class expld:
@@ -184,7 +184,7 @@ class expld:
             part_data = db.partsDev.find_one({"_id":current_bom["part"]["id"]})
             print(part_data)
             if part_data: #if there is part info use it
-                rec_data = {"name":part_data[self.nester], "children":[]}
+                rec_data = {"name":part_data[self.nester], "id":part_data["_id"], "children":[]}
             else: #else use bom.name
                 rec_data = {"name":current_bom["name"], "children":[]}
 
@@ -211,7 +211,7 @@ class expld:
             if bom_data:
                  return self.recurTree(db, bom_data["_id"])
             else:
-                return {"name": current_part[self.nester]}
+                return {"name": current_part[self.nester], "id":current_part["_id"]}
 
         else:
             return {"name":"unknown part/bom"}
@@ -228,40 +228,17 @@ class expld:
             print("data for wite: {}".format(data))
 
             with open('templates/data.json', 'w') as outfile:
-                json.dump(data, outfile, indent=4, sort_keys=True, separators=(',', ':'))
+                json.dump(json.loads(JSONEncoder().encode(data)), outfile, indent=4, sort_keys=True, separators=(',', ':'))
         else:
             print("Failed to find Top {}".format(top_bom))
             return None
 
-    def genJsonForD3OLD(self, db, top_bom):
-        data = {'name': top_bom, 'children': []}
-        
-
-        top = db.bomDev.find_one({"name":top_bom})
-        if(top):
-            print(top["_id"])
-            data["children"] = self.recurTree(db, top["_id"])
-            
-
-            with open('templates/data.json', 'a+') as outfile:
-                print(json.dump(data, outfile, indent=4, sort_keys=True, separators=(',', ':')))
-        else:
-            print("Failed to find Top {}".format(top_bom))
-            return None
 
     def describeBom(self, db, bom_id, attr):
         if type(attr) is dict:
             part = db.partsDev.insert_one(attr).inserted_id
             db.bomDev.update_one({"_id": bom_id}, {"$set":{"part":{"id":part}}})
         return part
-
-
-
-
-
-                
-
-
 
     def TEST(self, db):
         print(self.sheets)
