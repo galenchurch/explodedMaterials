@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 <style>
 
 .node circle {
@@ -20,9 +21,15 @@
 
 </style>
 <body>
+
+<div class="details">details</div>
+</body>
 <script src="//d3js.org/d3.v3.min.js"></script>
-  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
-  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<link rel="stylesheet" type="text/css" href="../static/js/jquery.svg.css"> 
+<script type="text/javascript" src="../static/js/jquery.svg.js"></script>
+<script type="text/javascript" src="../static/js/jquery.svgdom.js"></script>
 <script>
 
 var width = 900,
@@ -40,7 +47,7 @@ var svg = d3.select("body").append("svg")
   .append("g")
     .attr("transform", "translate(100,0)");
 
-d3.json("/data.json", function(error, json) {
+d3.json("/static/data/data.json", function(error, json) {
   if (error) throw error;
 
   var nodes = tree.nodes(json),
@@ -75,35 +82,57 @@ d3.json("/data.json", function(error, json) {
       .attr("dx", function(d) { return d.children ? -8 : 8; })
       .attr("dy", 3)
       .attr("text-anchor", function(d) { return d.children ? "end" : "start"; })
-      .attr("id-val", function(d) { return d.id; })
-      .text(function(d) { return "(" + d.qty + ") " + d.name; });
+      .attr("id", function(d) { return d.id; })
+      .text(function(d) { return "(" + d.qty + ") " + d.name; })
+      .on("mouseover", function(){
+        var element = $(this)
+        console.log(element[0])
+        var id = element.attr("id");
+        console.log(id)
 
-});
+        var request = $.ajax({
+          dataType:"json",
+          url: "/query/part/" + id,
+          context: document.body
+          });
+
+        request.done(function(data) {
+          console.log( data)
+          $("div.details").html(JSON.stringify(data))
+        });
+      });
+      // .on("mouseout", function(){ $("div.details").html("details") });
 
 d3.select(self.frameElement).style("height", height + "px");
 
 
 
-$( function() {
-  $( document ).tooltip({
-    items: "g",
-    content: function() {
-      var element = $( this );
-      if ( element.is( "g" ) ) {
-        var id = element.find("text").attr("id-val");
-        var ret_data = $.ajax({
-          url: "/query/part/" + id,
-          context: document.body
-        }).done(function(data) {
-          
-          console.log( data)
-          return JSON.stringify(data)
-        });
-        return ret_data
-       }
-      }
-  });
-} );
+
+
+});
+
+  // $(div.details).append(data)
+  // $( document ).tooltip({
+  //   items: "g",
+  //   content: function() {
+  //     var element = $( this );
+  //     if ( element.is( "g" ) ) {
+  //       var id = element.find("text").attr("id-val");
+
+  //       var request = $.ajax({
+  //         dataType:"json",
+  //         url: "/query/part/" + id,
+  //         context: document.body
+  //         });
+  //       request.done(function(data) {
+  //         console.log( data)
+  //         ret_data = data
+  //       });
+  //       return ret_data
+  //      }
+  //     }
+  // });
+
 
 
 
