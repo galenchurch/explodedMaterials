@@ -19,7 +19,13 @@ def data():
 @app.route('/query/<col>/<obj_id>')
 def api_article(col, obj_id):
     queryFrag = frag()
-    return queryFrag.getDataFromDB(col, obj_id)
+    return queryFrag.getJSONfromDB(col, obj_id)
+
+@app.route('/display/<col>/<obj_id>')
+def api_docify(col, obj_id):
+    queryFrag = frag()
+    # return queryFrag.returnDocifyDisplay(col, obj_id)
+    return render_template("docifyDisplay.html", displayview=queryFrag.returnDocifyDisplay(col, obj_id))
 
 if __name__ == "__main__":
     app.run()

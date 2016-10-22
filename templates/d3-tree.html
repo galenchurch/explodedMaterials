@@ -21,13 +21,17 @@
 
 </style>
 <body>
+  <div class="container">
+    <nav></nav>
+    <article class="details">details</article>
+  </div>
 
-<div class="details">details</div>
 </body>
 <script src="//d3js.org/d3.v3.min.js"></script>
 <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
 <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
 <link rel="stylesheet" type="text/css" href="../static/js/jquery.svg.css"> 
+<link rel="stylesheet" type="text/css" href="../static/css/styles.css"> 
 <script type="text/javascript" src="../static/js/jquery.svg.js"></script>
 <script type="text/javascript" src="../static/js/jquery.svgdom.js"></script>
 <script>
@@ -41,7 +45,7 @@ var tree = d3.layout.tree()
 var diagonal = d3.svg.diagonal()
     .projection(function(d) { return [d.y, d.x]; });
 
-var svg = d3.select("body").append("svg")
+var svg = d3.select("nav").append("svg")
     .attr("width", width)
     .attr("height", height)
   .append("g")
@@ -85,55 +89,48 @@ d3.json("/static/data/data.json", function(error, json) {
       .attr("id", function(d) { return d.id; })
       .text(function(d) { return "(" + d.qty + ") " + d.name; })
       .on("mouseover", function(){
+        $(this).attr("fill", "red")
         var element = $(this)
         console.log(element[0])
         var id = element.attr("id");
         console.log(id)
 
         var request = $.ajax({
-          dataType:"json",
-          url: "/query/part/" + id,
+          dataType:"html",
+          url: "/display/part/" + id,
           context: document.body
           });
-
         request.done(function(data) {
-          console.log( data)
-          $("div.details").html(JSON.stringify(data))
+          // console.log(data)
+          $("article.details").html(data)
+        });
+      })
+      .on("mouseout", function(){ 
+         $(this).attr("fill", "black")
+        //$("div.details").html("details") 
+      })
+      .on("click", function(){
+        var element = $(this)
+        console.log(element[0])
+        var id = element.attr("id");
+        console.log(id)
+
+        var request = $.ajax({
+          dataType:"html",
+          url: "/display/part/" + id,
+          context: document.body
+          });
+        request.done(function(data) {
+          // console.log(data)
+          $("article.details").html(data)
         });
       });
-      // .on("mouseout", function(){ $("div.details").html("details") });
 
 d3.select(self.frameElement).style("height", height + "px");
 
 
 
-
-
 });
-
-  // $(div.details).append(data)
-  // $( document ).tooltip({
-  //   items: "g",
-  //   content: function() {
-  //     var element = $( this );
-  //     if ( element.is( "g" ) ) {
-  //       var id = element.find("text").attr("id-val");
-
-  //       var request = $.ajax({
-  //         dataType:"json",
-  //         url: "/query/part/" + id,
-  //         context: document.body
-  //         });
-  //       request.done(function(data) {
-  //         console.log( data)
-  //         ret_data = data
-  //       });
-  //       return ret_data
-  //      }
-  //     }
-  // });
-
-
 
 
 </script>
