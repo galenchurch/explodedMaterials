@@ -70,13 +70,17 @@ def main():
     #result = service.spreadsheets().values().get(spreadsheetId=spreadsheetId, range=rangeName).execute()
     test = expld(service, spreadsheetId)
     
-    db = mongoScratchAuth()
+    db = openDB("db_uri.json")
     test.TEST(db)
         
 
-def mongoScratchAuth():
-    password = "expld920225"
-    mbdClient = MongoClient('mongodb://expldScratch:' + password + '@127.0.0.1/expld')
+def openDb(db_uri_file):
+    """read db_uri_file and return mongo db client"""
+
+    with open(db_uri_file, 'r') as data_file_db:
+        db_data = json.loads(data_file_db.read())
+
+    mbdClient = MongoClient(db_data["db_uri"])
     return mbdClient.expld
 
 
