@@ -51,7 +51,7 @@ def get_credentials():
         print('Storing credentials to ' + credential_path)
     return credentials
 
-def main():
+def sheetLoad(sheet_id):
     """Shows basic usage of the Sheets API.
 
     Creates a Sheets API service object and prints the names and majors of
@@ -65,13 +65,13 @@ def main():
     service = discovery.build('sheets', 'v4', http=http,
                               discoveryServiceUrl=discoveryUrl)
 
-    spreadsheetId = '1x6GHOWAbmr9GZfmaDpBoCzsWTjzwKCyTOH-3Eo7kvJA'
-    #rangeName = 'Class Data!A2:E'
-    #result = service.spreadsheets().values().get(spreadsheetId=spreadsheetId, range=rangeName).execute()
+    spreadsheetId = sheet_id
+
     test = expld(service, spreadsheetId)
     
     db = openDB("db_uri.json")
     test.TEST(db)
+    return True
         
 
 def openDB(db_uri_file):
@@ -82,7 +82,3 @@ def openDB(db_uri_file):
 
     mbdClient = MongoClient(db_data["db_uri"])
     return mbdClient.expld
-
-
-if __name__ == '__main__':
-    main()

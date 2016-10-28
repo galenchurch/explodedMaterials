@@ -1,6 +1,7 @@
 from flask import Flask
 from flask import *
 from fragmentation import frag
+from sheetPort import sheetLoad
 
 app = Flask(__name__)
 
@@ -26,6 +27,13 @@ def api_docify(col, obj_id):
     queryFrag = frag()
     # return queryFrag.returnDocifyDisplay(col, obj_id)
     return render_template("docifyDisplay.html", displayview=queryFrag.returnDocifyDisplay(col, obj_id))
+
+@app.route('/load/<sheet_id>')
+def reLoad(sheet_id):
+	test_id = "1x6GHOWAbmr9GZfmaDpBoCzsWTjzwKCyTOH-3Eo7kvJA"
+
+	sheetLoad(test_id)
+	return sheet_id
 
 if __name__ == "__main__":
     app.run()
